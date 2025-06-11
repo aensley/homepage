@@ -1,84 +1,89 @@
-import Block from "components/services/widget/block";
-import Container from "components/services/widget/container";
-import { useTranslation } from "next-i18next";
+import { useTranslation } from "next-i18next"; 
 
-import useWidgetAPI from "utils/proxy/use-widget-api";
+import Container from "components/services/widget/container"; 
+import Block from "components/services/widget/block"; 
+import useWidgetAPI from "utils/proxy/use-widget-api"; 
+import { useEffect, useState } from "react";
 
+const REFRESH_INTERVAL = 30000;
 const MAX_ALLOWED_FIELDS = 4;
 
 export default function Component({ service }) {
   const { t } = useTranslation();
   const { widget } = service;
-  const containersEndpoint = !(!widget.showSummary && widget.showStacks) ? "containers" : "";
-  const { data: containersData, error: containersError } = useWidgetAPI(widget, containersEndpoint);
-  const stacksEndpoint = widget.showSummary || widget.showStacks ? "stacks" : "";
-  const { data: stacksData, error: stacksError } = useWidgetAPI(widget, stacksEndpoint);
-  const serversEndpoint = widget.showSummary ? "servers" : "";
-  const { data: serversData, error: serversError } = useWidgetAPI(widget, serversEndpoint);
+  const [updatesCount, setUpdatesCount] = useState(0);
 
-  if (containersError || stacksError || serversError) {
-    return <Container service={service} error={containersError ?? stacksError ?? serversError} />;
+  if (!widget.fields) {
+    widget.fields = ["serversHealthy", "stacksRunning", "containersRunning", "containersStopped"];
   }
 
-  if (!widget.fields || widget.fields.length === 0) {
-    widget.fields = widget.showSummary
-      ? ["servers", "stacks", "containers"]
-      : widget.showStacks
-        ? ["total", "running", "down", "unhealthy"]
-        : ["total", "running", "stopped", "unhealthy"];
-  } else if (widget.fields?.length > MAX_ALLOWED_FIELDS) {
+  if (widget.fields.length > MAX_ALLOWED_FIELDS) {
     widget.fields = widget.fields.slice(0, MAX_ALLOWED_FIELDS);
   }
 
-  if (
-    (!widget.showStacks && !containersData) ||
-    (widget.showSummary && (!stacksData || !serversData)) ||
-    (widget.showStacks && !stacksData)
-  ) {
-    return widget.showSummary ? (
+  const { data: serverData, error: serverError } = useWidgetAPI(widget, "servers", { refreshInterval: REFRESH_INTERVAL } );
+  const { data: stackData, error: stackError } = useWidgetAPI(widget, "stacks", { refreshInterval: REFRESH_INTERVAL });
+  const { data: containerData, error: containerError } = useWidgetAPI(widget, "containers", { refreshInterval: REFRESH_INTERVAL });
+  const { data: stackDetails, error: stackDetailsError } = useWidgetAPI(widget, "stackDetails", { refreshInterval: REFRESH_INTERVAL });
+
+  const serverBlocks = ["serversHealthy", "serversUnhealthy", "serversDisabled", "serversTotal"];
+  const stackBlocks = ["stacksRunning", "stacksStopped", "stacksDown", "stacksUnhealthy", "stacksTotal"];
+  const containerBlocks = ["containersRunning", "containersStopped", "containersUnhealthy", "containersTotal"];
+  const containerUpdatesBlock = ["containerUpdates"];
+
+  useEffect(() => {
+    console.log(stackDetails)
+    if(stackDetails !== undefined) {
+      setUpdatesCount(stackDetails
+        .flatMap(stack => stack.info.services)
+        .filter(service => service.update_available === true)
+        .length);
+    }
+  }, [stackDetails]);
+
+  if (serverError && widget.fields.some(item => serverBlocks.includes(item))) {
+    return <Container service={service} error={serverError} />;
+  }
+
+  if (stackError && widget.fields.some(item => stackBlocks.includes(item))) {
+    return <Container service={service} error={stackError} />;
+  }
+
+  if (containerError && widget.fields.some(item => containerBlocks.includes(item))) {
+    return <Container service={service} error={containerError} />;
+  }
+
+  if (stackDetailsError && widget.fields.some(item => containerUpdatesBlock.includes(item))) {
+    return <Container service={service} error={stackDetailsError} />;
+  }
+
+  if (!serverData || !stackData || !containerData || !stackDetails) {
+    return (
       <Container service={service}>
-        <Block label="komodo.servers" />
-        <Block label="komodo.stacks" />
-        <Block label="komodo.containers" />
-      </Container>
-    ) : widget.showStacks ? (
-      <Container service={service}>
-        <Block label="komodo.total" />
-        <Block label="komodo.running" />
-        <Block label="komodo.down" />
-        <Block label="komodo.unhealthy" />
-      </Container>
-    ) : (
-      <Container service={service}>
-        <Block label="komodo.total" />
-        <Block label="komodo.running" />
-        <Block label="komodo.stopped" />
-        <Block label="komodo.unhealthy" />
+        <Block label="komodo.serversHealthy" />
+        <Block label="komodo.stacksRunning" />
+        <Block label="komodo.containersRunning" />
+        <Block label="komodo.containersStopped" />
       </Container>
     );
   }
 
-  return widget.showSummary ? (
+  return (
     <Container service={service}>
-      <Block label="komodo.servers" value={`${serversData.healthy} / ${serversData.total}`} />
-      <Block label="komodo.stacks" value={`${stacksData.running} / ${stacksData.total}`} />
-      <Block label="komodo.containers" value={`${containersData.running} / ${containersData.total}`} />
-    </Container>
-  ) : widget.showStacks ? (
-    <Container service={service}>
-      <Block label="komodo.total" value={t("common.number", { value: stacksData.total })} />
-      <Block label="komodo.running" value={t("common.number", { value: stacksData.running })} />
-      <Block label="komodo.down" value={t("common.number", { value: stacksData.stopped + stacksData.down })} />
-      <Block label="komodo.unhealthy" value={t("common.number", { value: stacksData.unhealthy })} />
-      <Block label="komodo.unknown" value={t("common.number", { value: stacksData.unknown })} />
-    </Container>
-  ) : (
-    <Container service={service}>
-      <Block label="komodo.total" value={t("common.number", { value: containersData.total })} />
-      <Block label="komodo.running" value={t("common.number", { value: containersData.running })} />
-      <Block label="komodo.stopped" value={t("common.number", { value: containersData.stopped })} />
-      <Block label="komodo.unhealthy" value={t("common.number", { value: containersData.unhealthy })} />
-      <Block label="komodo.unknown" value={t("common.number", { value: containersData.unknown })} />
+      <Block label="komodo.serversHealthy" value={`${serverData.healthy} / ${serverData.total}`} />
+      <Block label="komodo.serversUnhealthy" value={`${serverData.unhealthy} / ${serverData.total}`} />
+      <Block label="komodo.serversDisabled" value={`${serverData.disabled} / ${serverData.total}`} />
+      <Block label="komodo.serversTotal" value={t("common.number", { value: serverData.total })} />
+      <Block label="komodo.stacksRunning" value={`${stackData.running} / ${stackData.total}`} />
+      <Block label="komodo.stacksStopped" value={`${stackData.stopped} / ${stackData.total}`} />
+      <Block label="komodo.stacksDown" value={`${stackData.down} / ${stackData.total}`} />
+      <Block label="komodo.stacksUnhealthy" value={`${stackData.unhealthy} / ${stackData.total}`} />
+      <Block label="komodo.stacksTotal" value={t("common.number", { value: stackData.total })} />
+      <Block label="komodo.containersRunning" value={`${containerData.running} / ${containerData.total}`} />
+      <Block label="komodo.containersStopped" value={`${containerData.stopped} / ${containerData.total}`} />
+      <Block label="komodo.containersUnhealthy" value={`${containerData.unhealthy} / ${containerData.total}`} />
+      <Block label="komodo.containersTotal" value={t("common.number", { value: containerData.total })} />
+      <Block label="komodo.containerUpdates" value={t("common.number", { value: updatesCount })} />
     </Container>
   );
 }

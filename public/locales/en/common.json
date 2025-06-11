@@ -1062,14 +1062,19 @@
         "hostErrors": "Host issues"
     },
     "komodo": {
-        "total": "Total",
-        "running": "Running",
-        "stopped": "Stopped",
-        "down": "Down",
-        "unhealthy": "Unhealthy",
-        "unknown": "Unknown",
-        "servers": "Servers",
-        "stacks": "Stacks",
-        "containers": "Containers"
+        "serversHealthy": "Healthy servers",
+        "serversUnhealthy": "Unhealthy servers",
+        "serversDisabled": "Disabled servers",
+        "serversTotal": "Total servers",
+        "stacksRunning": "Running stacks",
+        "stacksStopped": "Stopped stacks",
+        "stacksDown": "Stacks down",
+        "stacksUnhealthy": "Unhealthy stacks",
+        "stacksTotal": "Total stacks",
+        "containersRunning": "Running containers",
+        "containersStopped": "Stopped containers",
+        "containersUnhealthy": "Unhealthy containers",
+        "containersTotal": "Total containers",
+        "containerUpdates": "Container updates"
     }
 }

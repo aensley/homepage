@@ -2,29 +2,24 @@ import komodoProxyHandler from "./proxy";
 
 const widget = {
   api: "{url}/{endpoint}",
-  proxyHandler: komodoProxyHandler,
+  proxyHandler: komodoProxyHandler ,
 
-  mappings: {
-    containers: {
-      endpoint: "containers", // api actually uses unified read endpoint
-      body: {
-        type: "GetDockerContainersSummary",
-        params: {},
-      },
+  mappings:  {
+    servers:  {
+      endpoint: "read",
+      body: `{ "type": "GetServersSummary", "params": { }}`,
     },
-    stacks: {
-      endpoint: "stacks", // api actually uses unified read endpoint
-      body: {
-        type: "GetStacksSummary",
-        params: {},
-      },
+    stacks:  {
+      endpoint: "read",
+      body: '{ "type": "GetStacksSummary", "params": {}}',
     },
-    servers: {
-      endpoint: "servers", // api actually uses unified read endpoint
-      body: {
-        type: "GetServersSummary",
-        params: {},
-      },
+    stackDetails:  {
+      endpoint: "read",
+      body: '{ "type": "ListStacks", "params": {}}',
+    },
+    containers:  {
+      endpoint: "read",
+      body: '{ "type": "GetDockerContainersSummary", "params": {}}',
     },
   },
 };
